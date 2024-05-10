@@ -19,15 +19,7 @@ export class AuthController {
 
 
 
-  // @Post('email/login')
-  // @HttpCode(HttpStatus.OK)
-  // public async login(@Body() login: Login): Promise<IResponse> {
-  //   return await this.authService.validateLogin(login.email, login.password);
-  
-  // }
-
-
-  @Post('email/login')
+  @Post('login')
   @HttpCode(HttpStatus.OK)
   public async login(@Body() login: Login): Promise<IResponse> {
     try {
@@ -39,13 +31,12 @@ export class AuthController {
   }
 
 
-  @Post('email/register')
+  @Post('signup')
   @HttpCode(HttpStatus.OK)
   async register(@Body() createUserDto: CreateUserDto): Promise<IResponse> {
     try {
       const newUser = new UserDto(await this.userService.createNewUser(createUserDto));
-      await this.authService.createEmailToken(newUser.email);
-      //await this.authService.saveUserConsent(newUser.email); //[GDPR user content]
+      await this.authService.createOtpToken(newUser.email);
       const sent = await this.authService.sendEmailVerification(newUser.email);
       if(sent){
         return new ResponseSuccess("REGISTRATION.USER_REGISTERED_SUCCESSFULLY");
@@ -58,13 +49,31 @@ export class AuthController {
   }
 
 
-  @Get('email/verify/:token')
+  @Get('verify/:token')
   public async verifyEmail(@Param() params): Promise<IResponse> {
     try {
       const isEmailVerified = await this.authService.verifyEmail(params.token);
-      return new ResponseSuccess("LOGIN.EMAIL_VERIFIED", isEmailVerified);
+      await this.authService.updateOtpToken(params.token);
+      return new ResponseSuccess("EMAIL_VERIFIED", isEmailVerified);
     } catch(error) {
-      return new ResponseError("LOGIN.ERROR", error);
+      return new ResponseError("VERIFICATION FAILED!", error);
     }
   }
-}
+
+
+  @Get('forgot-password/:email')
+  public async sendEmailForgotPassword(@Param() params): Promise<IResponse> {
+    try {
+      const isEmailSent = await this.authService.sendEmailForgotPassword(params.email);
+      if(isEmailSent){
+        return new ResponseSuccess("LOGIN.EMAIL_RESENT", null);
+      } else {
+        return new ResponseError("REGISTRATION.ERROR.MAIL_NOT_SENT");
+      }
+    } catch(error) {
+      return new ResponseError("LOGIN.ERROR.SEND_EMAIL", error);
+    }
+  }
+
+
+  }

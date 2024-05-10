@@ -6,7 +6,7 @@ import mongoose, { Schema } from 'mongoose';
 
 export const EmailVerificationSchema = new Schema({
   email: String,
-  emailToken: String,
+  otpToken: String,
   timestamp: Date
 });
 

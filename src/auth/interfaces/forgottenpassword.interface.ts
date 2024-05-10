@@ -1,11 +1,10 @@
 /* eslint-disable prettier/prettier */
 
 
-
 import { Document } from 'mongoose';
 
-export interface EmailVerification extends Document{
+export interface ForgottenPassword extends Document{
     email: string;
-    otpToken: string;
+    newPasswordToken: string;
     timestamp: Date;
   }

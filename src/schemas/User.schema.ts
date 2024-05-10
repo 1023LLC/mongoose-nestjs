@@ -19,19 +19,8 @@ export class User {
     password: string;
 
 
-    @Prop({
-        required: false, 
-        type: {
-            email: {
-                valid: { type: Boolean, default: false }
-            }
-        }
-    })
-    auth: {
-        email: {
-            valid: boolean;
-        };
-    };
+    @Prop({ default: false})
+    isVerifiedEmail: boolean
 }
 
 

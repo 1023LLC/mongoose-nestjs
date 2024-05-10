@@ -29,7 +29,7 @@ export class UsersService {
                 newUser.password = await bcrypt.hash(newUser.password, 10);
                 const createdUser = new this.userModel(newUser);
                 return await createdUser.save();
-            } else if (!userRegistered.auth.email.valid) {
+            } else if (!userRegistered.isVerifiedEmail) {
                 return userRegistered;
             } else {
                 throw new HttpException('REGISTRATION.USER_ALREADY_REGISTERED', HttpStatus.FORBIDDEN)

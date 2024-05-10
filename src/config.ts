@@ -4,28 +4,30 @@
 
 export default {
     "db": {
-        "user": null,
-        "pass": null,
-        "host": "localhost",
-        "port": "27017",
-        "database": "testdb",
-        "authSource": null
+        "user": process.env.DB_USER,
+        "pass": process.env.DB_PASS,
+        "host": process.env.DB_HOST,
+        "port": process.env.DB_PORT,
+        "database": process.env.DB_DATABASE,
+        "authSource": process.env.DB_AUTH_SOURCE
     },
     "host": {
-        "url": "<server-url>",
-        "port": "3000"
+        "url": "localhost",
+        "port": 3000 
     },
     "jwt": {
-        "secretOrKey": "secret",
-        "expiresIn": 36000000
+        "secretOrKey": process.env.JWT_SECRET,
+        "expiresIn": parseInt(process.env.JWT_EXPIRES_IN, 10)
     },
     "mail":{
+        "service":process.env.MAIL_SERVICE,
         "host": "smtp.gmail.com",
         "port": "587",
         "secure": false,
-        "user": "hiddenbookings58@gmail.com",
-        "pass": "rxjfhcpgtxjisoxo"
+        "auth": {
+            "user": "hiddenbookings58@gmail.com",
+            "pass": "rxjfhcpgtxjisoxo",
+        }
+      
     }
-  }
-  
-  
+};

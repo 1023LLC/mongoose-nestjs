@@ -8,9 +8,5 @@ export interface User {
   username: string;
   email: string;
   password: string;
-  auth?: {
-      email?: {
-          valid: boolean;
-      };
-  };
+  isVerifiedEmail: boolean;
 }

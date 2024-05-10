@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 
-import { IsEmail, IsNotEmpty, IsString, Length } from "class-validator";
+import { IsBoolean, IsEmail, IsNotEmpty, IsString, Length } from "class-validator";
 
 export class CreateUserDto {
     @IsNotEmpty()
@@ -15,6 +15,9 @@ export class CreateUserDto {
     @IsString()
     @Length(7, 20, {  message: 'Password to be between 3, 20 characters'})
     public password: string
+
+    @IsBoolean()
+    isVerifiedEmail
 
    
 }
