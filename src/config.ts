@@ -16,8 +16,8 @@ export default {
         "port": 3000 
     },
     "jwt": {
-        "secretOrKey": process.env.JWT_SECRET,
-        "expiresIn": parseInt(process.env.JWT_EXPIRES_IN, 10)
+        "secretOrKey": "secret",
+        "expiresIn": 36000000
     },
     "mail":{
         "service":process.env.MAIL_SERVICE,

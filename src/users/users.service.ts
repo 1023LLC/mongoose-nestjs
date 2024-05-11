@@ -8,6 +8,9 @@ import { CreateUserDto } from './dto/create-user.dto';
 import * as bcrypt from 'bcrypt';
 
 
+const saltRounds = 10;
+
+
 @Injectable()
 export class UsersService {
     constructor(@InjectModel(User.name) private userModel: Model<User>) { }
@@ -46,5 +49,16 @@ export class UsersService {
             return re.test(email);
         } else return false
     }
+
+
+    async setPassword(email: string, newPassword: string): Promise<boolean> { 
+        const userFromDb = await this.userModel.findOne({ email: email});
+        if(!userFromDb) throw new HttpException('LOGIN.USER_NOT_FOUND', HttpStatus.NOT_FOUND);
+        
+        userFromDb.password = await bcrypt.hash(newPassword, saltRounds);
+    
+        await userFromDb.save();
+        return true;
+      }
 
 }

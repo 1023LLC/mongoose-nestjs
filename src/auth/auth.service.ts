@@ -104,7 +104,7 @@ export class AuthService {
             subject: 'Verify Email', 
             text: 'Verify Email', 
             html: 'Hi! <br><br> Welcome to GODAN! <br><br>'+
-            '<a href='+ config.host.url + ':' + config.host.port +'/auth/email/verify/'+ model.otpToken + '>Click here to activate your account</a>'  // html body
+            ' Your OTP is ' + model.otpToken   
           };
       
           const sent = await new Promise<boolean>(async function(resolve, reject) {
@@ -131,6 +131,11 @@ export class AuthService {
         { $set: { otpToken: 'Washed-Up!' } }, // Update the emailToken field to 'used'
         { new: true })
     }
+
+    // async deletePasswordToken(token: string): Promise<void> {
+    //   await this.forgottenPasswordModel.deleteOne(
+    //     { newPasswordToken: resetPassword.newPasswordToken })
+    // }
 
 
     async createForgottenPasswordToken(email: string): Promise<ForgottenPassword> {
@@ -174,12 +179,12 @@ export class AuthService {
         });
     
         const mailOptions = {
-          from: '"shambaassistant" <' + config.mail.auth.user + '>', 
+          from: '"godancomms@gmail.com" <' + config.mail.auth.user + '>', 
           to: email, // list of receivers (separated by ,)
           subject: 'Frogotten Password', 
           text: 'Forgot Password',
-          html: `Hi! <br><br> If you requested for a password reset<br><br>` +
-            `<a href="${config.host.url}:${config.host.port}/auth/email/reset-password/${tokenModel.newPasswordToken}">Click here</a>`// html body
+          html: `Hi! <br><br> We received a request to reset your password, <br><br>` +
+            `<a href="${config.host.url}:${config.host.port}/auth/account/reset-password/${tokenModel.newPasswordToken}">Click here</a>`// html body
         };
     
         const sent = await new Promise<boolean>(async function(resolve, reject) {
@@ -197,6 +202,19 @@ export class AuthService {
     } else {
       throw new HttpException('REGISTER.USER_NOT_REGISTERED', HttpStatus.FORBIDDEN);
     }
+  }
+
+  async checkPassword(email: string, password: string){
+    const userFromDb = await this.userModel.findOne({ email: email});
+    if(!userFromDb) throw new HttpException('LOGIN.USER_NOT_FOUND', HttpStatus.NOT_FOUND);
+
+    return await bcrypt.compare(password, userFromDb.password);
+  }
+
+
+
+  async getForgottenPasswordModel(newPasswordToken: string): Promise<ForgottenPassword> {
+    return await this.forgottenPasswordModel.findOne({newPasswordToken: newPasswordToken});
   }
   
 }

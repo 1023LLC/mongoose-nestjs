@@ -8,6 +8,7 @@ import { ResponseSuccess, ResponseError } from '../common/dto/response.dto';
 import { UserDto } from 'src/users/dto/user.dto';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
 import { UsersService } from 'src/users/users.service';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
 
@@ -19,7 +20,7 @@ export class AuthController {
 
 
 
-  @Post('login')
+  @Post('sign-in')
   @HttpCode(HttpStatus.OK)
   public async login(@Body() login: Login): Promise<IResponse> {
     try {
@@ -31,7 +32,7 @@ export class AuthController {
   }
 
 
-  @Post('signup')
+  @Post('sign-up')
   @HttpCode(HttpStatus.OK)
   async register(@Body() createUserDto: CreateUserDto): Promise<IResponse> {
     try {
@@ -76,4 +77,29 @@ export class AuthController {
   }
 
 
+  @Post('account/reset-password')
+  @HttpCode(HttpStatus.OK)
+  public async setNewPassord(@Body() resetPassword: ResetPasswordDto): Promise<IResponse> {
+    try {
+      let isNewPasswordChanged : boolean = false;
+      if(resetPassword.email && resetPassword.currentPassword){
+        const isValidPassword = await this.authService.checkPassword(resetPassword.email, resetPassword.currentPassword);
+        if(isValidPassword) {
+          isNewPasswordChanged = await this.userService.setPassword(resetPassword.email, resetPassword.newPassword);
+        } else {
+          return new ResponseError("RESET_PASSWORD.WRONG_CURRENT_PASSWORD");
+        }
+      } else if (resetPassword.newPasswordToken) {
+        const forgottenPasswordModel = await this.authService.getForgottenPasswordModel(resetPassword.newPasswordToken);
+        isNewPasswordChanged = await this.userService.setPassword(forgottenPasswordModel.email, resetPassword.newPassword);
+        if(isNewPasswordChanged) await forgottenPasswordModel.deleteOne({ newPasswordToken: resetPassword.newPasswordToken });
+        
+      } else {
+        return new ResponseError("RESET_PASSWORD.CHANGE_PASSWORD_ERROR");
+      }
+      return new ResponseSuccess("RESET_PASSWORD.PASSWORD_CHANGED", isNewPasswordChanged);
+    } catch(error) {
+      return new ResponseError("RESET_PASSWORD.CHANGE_PASSWORD_ERROR", error);
+    }
   }
+}
