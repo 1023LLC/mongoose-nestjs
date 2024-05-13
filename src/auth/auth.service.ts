@@ -6,7 +6,6 @@ import { UserDto } from 'src/users/dto/user.dto';
 import { User } from 'src/users/interfaces/user.interface';
 import { JWTService } from './jwt.service';
 import { EmailVerification } from './interfaces/emailverification.interface';
-import config from 'src/config';
 import * as nodemailer from 'nodemailer';
 import { ForgottenPassword } from './interfaces/forgottenpassword.interface';
 import { ConfigService } from '@nestjs/config';
@@ -93,21 +92,23 @@ export class AuthService {
 
   async sendEmailVerification(email: string): Promise<boolean> {
     const model = await this.emailVerificationModel.findOne({ email: email });
-    console.log(this.configService.get('MAIL_USER'));
     if (model && model.otpToken) {
       const transporter = nodemailer.createTransport({
-        host: config.mail.host,
-        port: config.mail.port,
-        secure: config.mail.secure,
+        host: this.configService.get('MAIL_HOST'),
+        port: this.configService.get('MAIL_PORT'),
+        secure: this.configService.get('MAIL_SECURE'),
         auth: {
-          user: config.mail.auth.user,
-          pass: config.mail.auth.pass,
+          user: this.configService.get('MAIL_USER'),
+          pass: this.configService.get('MAIL_PASS'),
         },
       });
 
       const mailOptions = {
-        from: '"godancomms@gmail.com" <' + config.mail.auth.user + '>',
-        to: email, // list of receivers (separated by ,)
+        from:
+          '"godancomms@gmail.com" <' +
+          this.configService.get('MAIL_USER') +
+          '>',
+        to: email,
         subject: 'Verify Email',
         text: 'Verify Email',
         html:
@@ -138,16 +139,11 @@ export class AuthService {
 
   async updateOtpToken(token: string): Promise<void> {
     await this.emailVerificationModel.findOneAndUpdate(
-      { otpToken: token }, // Find the document with the matching emailToken
-      { $set: { otpToken: 'Washed-Up!' } }, // Update the emailToken field to 'used'
+      { otpToken: token },
+      { $set: { otpToken: 'Washed-Up!' } },
       { new: true },
     );
   }
-
-  // async deletePasswordToken(token: string): Promise<void> {
-  //   await this.forgottenPasswordModel.deleteOne(
-  //     { newPasswordToken: resetPassword.newPasswordToken })
-  // }
 
   async createForgottenPasswordToken(
     email: string,
@@ -197,23 +193,26 @@ export class AuthService {
 
     if (tokenModel && tokenModel.newPasswordToken) {
       const transporter = nodemailer.createTransport({
-        host: config.mail.host,
-        port: config.mail.port,
-        secure: config.mail.secure, // true for 465, false for other ports
+        host: this.configService.get('MAIL_HOST'),
+        port: this.configService.get('MAIL_PORT'),
+        secure: this.configService.get('MAIL_SECURE'),
         auth: {
-          user: config.mail.auth.user,
-          pass: config.mail.auth.pass,
+          user: this.configService.get('MAIL_USER'),
+          pass: this.configService.get('MAIL_PASS'),
         },
       });
 
       const mailOptions = {
-        from: '"godancomms@gmail.com" <' + config.mail.auth.user + '>',
-        to: email, // list of receivers (separated by ,)
+        from:
+          '"godancomms@gmail.com" <' +
+          this.configService.get('MAIL_USER') +
+          '>',
+        to: email,
         subject: 'Frogotten Password',
         text: 'Forgot Password',
         html:
           `Hi! <br><br> We received a request to reset your password, <br><br>` +
-          `<a href="${config.host.url}:${config.host.port}/auth/account/reset-password/${tokenModel.newPasswordToken}">Click here</a>`, // html body
+          `<a href="${this.configService.get('MAIL_HOST')}:${this.configService.get('MAIL_PORT')}/auth/account/reset-password/${tokenModel.newPasswordToken}">Click here</a>`, // html body
       };
 
       const sent = await new Promise<boolean>(async function (resolve, reject) {
