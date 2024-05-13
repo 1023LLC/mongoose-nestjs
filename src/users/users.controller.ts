@@ -1,43 +1,31 @@
-/* eslint-disable prettier/prettier */
-
-
-import { Body, Controller, Get, NotFoundException, Param, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { User } from 'src/schemas/User.schema';
+import { ResponseError, ResponseSuccess } from 'src/common/dto/response.dto';
+import { IResponse } from 'src/common/interfaces/response.interface';
+import { UserDto } from './dto/user.dto';
+import { ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-
+@ApiTags('Users')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-
-
-  @Post('signup')
-  @UsePipes(new ValidationPipe())
-  createUser(@Body() createUserDto: CreateUserDto){
-    console.log(createUserDto)
-    return this.usersService.createNewUser(createUserDto)
-  }
-
-  @Get()
-  async findAll(): Promise<User[]> {
-    try {
-      const users = await this.usersService.findAll();
-      return users;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-
   @Get(':email')
-  async findById(@Param('email') email: string) {
-    const user = await this.usersService.findByEmail(email);
-    if (!user) {
-      throw new NotFoundException('User not found');
+  @ApiParam({
+    name: 'email',
+    type: 'string',
+    description: 'Email',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Success!',
+  })
+  async findById(@Param() params): Promise<IResponse> {
+    try {
+      const user = await this.usersService.findByEmail(params.email);
+      return new ResponseSuccess('COMMON.SUCCESS', new UserDto(user));
+    } catch (error) {
+      return new ResponseError('COMMON.ERROR.GENERIC_ERROR', error);
     }
-    return user
   }
-
 }
