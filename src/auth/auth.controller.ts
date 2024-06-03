@@ -178,7 +178,6 @@ export class AuthController {
           forgottenPasswordModel.email,
           resetPassword.newPassword,
         );
-        console.log('is new password changed', isNewPasswordChanged);
         if (isNewPasswordChanged)
           await forgottenPasswordModel.deleteOne({
             newPasswordToken: resetPassword.newPasswordToken,

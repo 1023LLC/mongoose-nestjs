@@ -1,13 +1,12 @@
-/* eslint-disable prettier/prettier */
-
-
-
 import mongoose, { Schema } from 'mongoose';
 
 export const EmailVerificationSchema = new Schema({
   email: String,
   otpToken: String,
-  timestamp: Date
+  timestamp: Date,
 });
 
-export const EmailVerificationModel = mongoose.model('EmailVerification', EmailVerificationSchema);
+export const EmailVerificationModel = mongoose.model(
+  'EmailVerification',
+  EmailVerificationSchema,
+);

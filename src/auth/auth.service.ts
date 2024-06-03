@@ -6,6 +6,7 @@ import { UserDto } from 'src/users/dto/user.dto';
 import { User } from 'src/users/interfaces/user.interface';
 import { JWTService } from './jwt.service';
 import { EmailVerification } from './interfaces/emailverification.interface';
+import config from 'src/config';
 import * as nodemailer from 'nodemailer';
 import { ForgottenPassword } from './interfaces/forgottenpassword.interface';
 import { ConfigService } from '@nestjs/config';
@@ -24,6 +25,7 @@ export class AuthService {
 
   async validateLogin(email, password) {
     const userFromDb = await this.userModel.findOne({ email: email });
+    // console.log(userFromDb);
     if (!userFromDb)
       throw new HttpException('LOGIN.USER_NOT_FOUND', HttpStatus.NOT_FOUND);
     if (!userFromDb.isVerifiedEmail)
@@ -67,54 +69,144 @@ export class AuthService {
   }
 
   async verifyEmail(token: string): Promise<boolean> {
-    const emailVerif = await this.emailVerificationModel.findOne({
-      otpToken: token,
-    });
-    console.log(emailVerif);
-    if (emailVerif && emailVerif.email) {
-      const userFromDb = await this.userModel.findOne({
-        email: emailVerif.email,
+    try {
+      const emailVerif = await this.emailVerificationModel.findOne({
+        otpToken: token,
       });
-      console.log(userFromDb);
-      if (userFromDb) {
-        userFromDb.isVerifiedEmail = true;
-        const savedUser = await userFromDb.save();
-        console.log(savedUser);
-        return !!savedUser;
+
+      if (emailVerif && emailVerif.email) {
+        try {
+          const userFromDb = await this.userModel.findOne({
+            email: emailVerif.email,
+          });
+
+          if (userFromDb) {
+            try {
+              userFromDb.isVerifiedEmail = true;
+              const savedUser = await userFromDb.save();
+              return !!savedUser;
+            } catch (saveError) {
+              // console.error('Error saving user:', saveError);
+              throw new HttpException(
+                'Failed to save user.',
+                HttpStatus.INTERNAL_SERVER_ERROR,
+              );
+            }
+          }
+        } catch (userFetchError) {
+          // console.error('Error fetching user:', userFetchError);
+          throw new HttpException(
+            'Failed to fetch user.',
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          );
+        }
+      } else {
+        throw new HttpException(
+          'LOGIN.EMAIL_CODE_NOT_VALID',
+          HttpStatus.FORBIDDEN,
+        );
       }
-    } else {
+    } catch (emailVerifError) {
+      // console.error('Error verifying email token:', emailVerifError);
       throw new HttpException(
-        'LOGIN.EMAIL_CODE_NOT_VALID',
-        HttpStatus.FORBIDDEN,
+        'Failed to verify email token.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
 
   async sendEmailVerification(email: string): Promise<boolean> {
     const model = await this.emailVerificationModel.findOne({ email: email });
+    console.log(this.configService.get('MAIL_USER'));
     if (model && model.otpToken) {
       const transporter = nodemailer.createTransport({
-        host: this.configService.get('MAIL_HOST'),
-        port: this.configService.get('MAIL_PORT'),
-        secure: this.configService.get('MAIL_SECURE'),
+        host: config.mail.host,
+        port: config.mail.port,
+        secure: config.mail.secure,
         auth: {
-          user: this.configService.get('MAIL_USER'),
-          pass: this.configService.get('MAIL_PASS'),
+          user: config.mail.auth.user,
+          pass: config.mail.auth.pass,
         },
       });
 
       const mailOptions = {
-        from:
-          '"godancomms@gmail.com" <' +
-          this.configService.get('MAIL_USER') +
-          '>',
+        from: '"godancomms@gmail.com" <' + config.mail.auth.user + '>',
         to: email,
         subject: 'Verify Email',
         text: 'Verify Email',
-        html:
-          'Hi! <br><br> Welcome to GODAN! <br><br>' +
-          ' Your OTP is ' +
-          model.otpToken,
+        html: `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              .container {
+                width: 100%;
+                max-width: 600px;
+                margin: 0 auto;
+                padding: 20px;
+                font-family: Arial, sans-serif;
+                border: 1px solid #dddddd;
+                border-radius: 10px;
+              }
+              .header {
+                text-align: center;
+                background-color: #08c40b;
+                padding: 10px;
+                border-bottom: 1px solid #dddddd;
+              }
+              .content {
+                margin: 20px 0;
+                text-align: center;
+              }
+              .btn {
+                display: inline-block;
+                padding: 10px 20px;
+                font-size: 16px;
+                color: white;
+                background-color: #08c40b;
+                border: none;
+                border-radius: 5px;
+                text-decoration: none;
+              }
+              .footer {
+                text-align: center;
+                font-size: 12px;
+                color: #888888;
+                margin-top: 20px;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <img
+                  src="https://imgur.com/a/FRkxAOy"
+                  alt="GODAN Logo"
+                  width="100"
+                  height="auto"
+                />
+                <h2>Welcome to GODAN!</h2>
+              </div>
+              <div class="content">
+                <p>Hi there!</p>
+                <p>
+                  Thank you for registering with us. Please verify your email address to
+                  complete your registration.
+                </p>
+                <a
+                  href="https://shambahassistant/verify?token=${model.otpToken}"
+                  class="btn"
+                  >Verify Email</a
+                >
+              </div>
+              <div style="cursor:auto;color:#99AAB5;font-family:Whitney, Helvetica Neue, Helvetica, Arial, Lucida Grande, sans-serif;font-size:12px;line-height:24px;text-align:center;">
+                Basement Floor, Food Science, Nutrition and Technology, University of Nairobi 
+                <br>PO Box 35046, 00200 City Square, Nairobi-Kenya
+              </div>
+            </div>
+          </body>
+        </html>
+        `,
       };
 
       const sent = await new Promise<boolean>(async function (resolve, reject) {
@@ -139,11 +231,16 @@ export class AuthService {
 
   async updateOtpToken(token: string): Promise<void> {
     await this.emailVerificationModel.findOneAndUpdate(
-      { otpToken: token },
-      { $set: { otpToken: 'Washed-Up!' } },
+      { otpToken: token }, // Find the document with the matching emailToken
+      { $set: { otpToken: 'Washed-Up!' } }, // Update the emailToken field to 'used'
       { new: true },
     );
   }
+
+  // async deletePasswordToken(token: string): Promise<void> {
+  //   await this.forgottenPasswordModel.deleteOne(
+  //     { newPasswordToken: resetPassword.newPasswordToken })
+  // }
 
   async createForgottenPasswordToken(
     email: string,
@@ -193,26 +290,23 @@ export class AuthService {
 
     if (tokenModel && tokenModel.newPasswordToken) {
       const transporter = nodemailer.createTransport({
-        host: this.configService.get('MAIL_HOST'),
-        port: this.configService.get('MAIL_PORT'),
-        secure: this.configService.get('MAIL_SECURE'),
+        host: config.mail.host,
+        port: config.mail.port,
+        secure: config.mail.secure, // true for 465, false for other ports
         auth: {
-          user: this.configService.get('MAIL_USER'),
-          pass: this.configService.get('MAIL_PASS'),
+          user: config.mail.auth.user,
+          pass: config.mail.auth.pass,
         },
       });
 
       const mailOptions = {
-        from:
-          '"godancomms@gmail.com" <' +
-          this.configService.get('MAIL_USER') +
-          '>',
-        to: email,
+        from: '"godancomms@gmail.com" <' + config.mail.auth.user + '>',
+        to: email, // list of receivers (separated by ,)
         subject: 'Frogotten Password',
         text: 'Forgot Password',
         html:
           `Hi! <br><br> We received a request to reset your password, <br><br>` +
-          `<a href="${this.configService.get('MAIL_HOST')}:${this.configService.get('MAIL_PORT')}/auth/account/reset-password/${tokenModel.newPasswordToken}">Click here</a>`, // html body
+          `<a href="${config.host.url}:${config.host.port}/auth/account/reset-password/${tokenModel.newPasswordToken}">Click here</a>`, // html body
       };
 
       const sent = await new Promise<boolean>(async function (resolve, reject) {
